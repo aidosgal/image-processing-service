@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package image;
+
+option go_package = "aidosgal.image_service.v1.image_servicev1";
+
+service ImageService {
+  rpc UploadImage(UploadImageRequest) returns (UploadImageResponse);
+  rpc ListImages(ListImagesRequest) returns (ListImagesResponse);
+  rpc GetImage(GetImageRequest) returns (GetImageResponse);
+  rpc DeleteImage(DeleteImageRequest) returns (DeleteImageResponse);
+}
+
+message UploadImageRequest {
+  bytes image = 1; 
+  string filename = 2; 
+}
+
+message UploadImageResponse {
+  int64 image_id = 1;
+}
+
+message ListImagesRequest {}
+
+message ListImagesResponse {
+  repeated ImageMetadata images = 1;
+}
+
+message GetImageRequest {
+  int64 image_id = 1;
+}
+
+message GetImageResponse {
+  bytes image = 1; 
+  ImageMetadata metadata = 2;
+}
+
+message DeleteImageRequest {
+  int64 image_id = 1;
+}
+
+message DeleteImageResponse {
+  bool success = 1;
+}
+
+message ImageMetadata {
+  int64 image_id = 1;
+  string filename = 2;
+  string created_at = 3;
+}
+
