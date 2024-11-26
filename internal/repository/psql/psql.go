@@ -35,30 +35,37 @@ func NewRepository(cfg config.DatabaseConfig) (*Repository, error) {
 
 func (r *Repository) StoreImage(ctx context.Context, metadata *imagev1.ImageMetadata) (int64, error) {
 	const op = "psql.StoreImage"
-	result, err := r.db.Exec(`
+
+	var imageID int64
+	err := r.db.QueryRow(`
 		INSERT INTO images (
 			filename,
 			file_size,
 			mime_type,
 			width,
 			height,
-			uploaded_at,
-			updated_at,
 			file_path,
 			thumbnail_path,
-			image_format,
-			tags
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, metadata.GetFilename(), metadata)
+			image_format
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id
+	`, metadata.GetFilename(),
+		metadata.GetFileSize(),
+		metadata.GetMimeType(),
+		metadata.GetWidth(),
+		metadata.GetHeight(),
+		metadata.GetFilePath(),
+		metadata.GetThumbnailPath(),
+		metadata.GetImageFormat(),
+	).Scan(&imageID)
 	if err != nil {
 		return -1, fmt.Errorf("%s: %w", op, err)
 	}
 
-	image_id, err := result.LastInsertId()
 	if err != nil {
 		return -1, fmt.Errorf("%s: %w", op, err)
 	}
-	return image_id, nil
+	return imageID, nil
 }
 
 func (r *Repository) GetAllImages(ctx context.Context) ([]*imagev1.ImageMetadata, error) {

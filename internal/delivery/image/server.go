@@ -36,7 +36,7 @@ func (s *serverAPI) UploadImage(ctx context.Context, req *imagev1.UploadImageReq
 
 	image_id, err := s.service.UploadImage(ctx, req.GetImage(), req.GetFilename())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "internal error")
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &imagev1.UploadImageResponse{
