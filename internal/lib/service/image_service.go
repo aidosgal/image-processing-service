@@ -100,7 +100,10 @@ func GenerateThumbnail(filePath string) (string, error) {
 		thumbnailImg := imaging.Resize(img, 200, 0, imaging.Lanczos)
 
 		thumbnailDir := "./uploads/thumbnails"
-
+		if err := os.MkdirAll(thumbnailDir, os.ModePerm); err != nil {
+			errChan <- fmt.Errorf("failed to create directory thumbnail: %w", err)
+			return
+		}
 		thumbnailFilename := "thumb_" + filepath.Base(filePath)
 		thumbnailPath := filepath.Join(thumbnailDir, thumbnailFilename)
 

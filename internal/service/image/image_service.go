@@ -33,7 +33,9 @@ func NewImageService(log *slog.Logger, repository Repository) *ImageService {
 
 func (i *ImageService) UploadImage(ctx context.Context, image []byte, filename string) (int64, error) {
 	uploadsDir := "./uploads/images"
-
+	if err := os.MkdirAll(uploadsDir, os.ModePerm); err != nil {
+		return 0, err
+	}
 	uniqueFilename := lib.GenerateUniqueFilename(filename)
 	filePath := filepath.Join(uploadsDir, uniqueFilename)
 
