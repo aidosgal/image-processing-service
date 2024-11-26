@@ -15,10 +15,10 @@ type App struct {
 	port       int
 }
 
-func NewApp(log *slog.Logger, port int) *App {
+func NewApp(log *slog.Logger, service image.ImageService, port int) *App {
 	gRPCServer := grpc.NewServer()
 
-	image.Register(gRPCServer)
+	image.Register(gRPCServer, service)
 
 	return &App{
 		log:        log,
