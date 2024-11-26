@@ -12,8 +12,8 @@ service ImageService {
 }
 
 message UploadImageRequest {
-  bytes image = 1; 
-  string filename = 2; 
+  bytes image = 1;
+  string filename = 2;
 }
 
 message UploadImageResponse {
@@ -31,7 +31,7 @@ message GetImageRequest {
 }
 
 message GetImageResponse {
-  bytes image = 1; 
+  bytes image = 1;
   ImageMetadata metadata = 2;
 }
 
@@ -44,8 +44,16 @@ message DeleteImageResponse {
 }
 
 message ImageMetadata {
-  int64 image_id = 1;
-  string filename = 2;
-  string created_at = 3;
+    int64 image_id = 1;
+    string filename = 2;
+    int64 file_size = 3;
+    string mime_type = 4;
+    int32 width = 5;
+    int32 height = 6;
+    string created_at = 7;
+    string updated_at = 8;
+    string file_path = 9;
+    string thumbnail_path = 10;
+    string image_format = 11;
+    string tags = 12;
 }
-
