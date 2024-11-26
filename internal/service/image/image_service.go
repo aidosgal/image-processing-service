@@ -102,16 +102,94 @@ func (i *ImageService) UploadImage(ctx context.Context, image []byte, filename s
 }
 
 func (i *ImageService) ListImages(ctx context.Context) ([]*imagev1.ImageMetadata, error) {
+	i.log.Info("Listing all images")
 
-	return nil, nil
+	images, err := i.repository.GetAllImages(ctx)
+	if err != nil {
+		i.log.Error("Failed to list images", "error", err)
+		return nil, fmt.Errorf("failed to list images: %w", err)
+	}
+
+	i.log.Info("Images retrieved successfully", "count", len(images))
+
+	return images, nil
 }
 
-func (i *ImageService) GetImage(ctx context.Context, image_id int64) ([]byte, *imagev1.ImageMetadata, error) {
+func (i *ImageService) GetImage(ctx context.Context, imageID int64) ([]byte, *imagev1.ImageMetadata, error) {
+	i.log.Info("Retrieving image", "image_id", imageID)
 
-	return nil, nil, nil
+	metadata, err := i.repository.GetImageById(ctx, imageID)
+	if err != nil {
+		i.log.Error("Failed to retrieve image metadata", "image_id", imageID, "error", err)
+		return nil, nil, fmt.Errorf("failed to retrieve image metadata: %w", err)
+	}
+
+	imageBytes, err := os.ReadFile(metadata.GetFilePath())
+	if err != nil {
+		i.log.Error("Failed to read image file", "image_path", metadata.GetFilePath(), "error", err)
+		return nil, nil, fmt.Errorf("failed to read image file: %w", err)
+	}
+
+	i.log.Info("Image retrieved successfully", "image_id", imageID, "filename", metadata.GetFilename())
+
+	return imageBytes, metadata, nil
 }
 
-func (i *ImageService) DeleteImage(ctx context.Context, image_id int64) (bool, error) {
+func (i *ImageService) DeleteImage(ctx context.Context, imageID int64) (bool, error) {
+	i.log.Info("Deleting image", "image_id", imageID)
 
-	return false, nil
+	metadata, err := i.repository.GetImageById(ctx, imageID)
+	if err != nil {
+		i.log.Error("Failed to retrieve image metadata for deletion", "image_id", imageID, "error", err)
+		return false, fmt.Errorf("failed to retrieve image metadata: %w", err)
+	}
+
+	var wg sync.WaitGroup
+	var primaryFileErr, thumbnailErr error
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		primaryFileErr = os.Remove(metadata.GetFilePath())
+		if primaryFileErr != nil {
+			i.log.Error("Failed to delete primary image file",
+				"image_path", metadata.GetFilePath(),
+				"error", primaryFileErr)
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if metadata.GetThumbnailPath() != "" {
+			thumbnailErr = os.Remove(metadata.GetThumbnailPath())
+			if thumbnailErr != nil {
+				i.log.Error("Failed to delete thumbnail",
+					"thumbnail_path", metadata.GetThumbnailPath(),
+					"error", thumbnailErr)
+			}
+		}
+	}()
+
+	wg.Wait()
+
+	if primaryFileErr != nil || thumbnailErr != nil {
+		i.log.Warn("Some files could not be deleted",
+			"primary_file_error", primaryFileErr,
+			"thumbnail_error", thumbnailErr)
+	}
+
+	deleted, err := i.repository.DeleteImageById(ctx, imageID)
+	if err != nil {
+		i.log.Error("Failed to delete image from database", "image_id", imageID, "error", err)
+		return false, fmt.Errorf("failed to delete image from database: %w", err)
+	}
+
+	if deleted {
+		i.log.Info("Image deleted successfully", "image_id", imageID)
+	} else {
+		i.log.Warn("Image not found or already deleted", "image_id", imageID)
+	}
+
+	return deleted, nil
 }
