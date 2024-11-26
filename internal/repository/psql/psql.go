@@ -1,10 +1,12 @@
 package psql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
 	"github.com/aidosgal/image-processing-service/internal/config"
+	imagev1 "github.com/aidosgal/image-processing-service/pkg/gen/go/image"
 	_ "github.com/lib/pq"
 )
 
@@ -21,11 +23,6 @@ func NewRepository(cfg config.DatabaseConfig) (*Repository, error) {
 	}
 	defer db.Close()
 
-	err = createDatabaseIfNotExists(db, cfg.Name)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create the database: %w", err)
-	}
-
 	connStr = fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s",
 		cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Name, cfg.SSLMode)
 	db, err = sql.Open("postgres", connStr)
@@ -36,24 +33,42 @@ func NewRepository(cfg config.DatabaseConfig) (*Repository, error) {
 	return &Repository{db: db}, nil
 }
 
-func createDatabaseIfNotExists(db *sql.DB, dbName string) error {
-	var exists bool
-	err := db.QueryRow(`SELECT EXISTS (
-		SELECT FROM pg_catalog.pg_database
-		WHERE datname = $1
-	);`, dbName).Scan(&exists)
+func (r *Repository) StoreImage(ctx context.Context, metadata *imagev1.ImageMetadata) (int64, error) {
+	const op = "psql.StoreImage"
+	result, err := r.db.Exec(`
+		INSERT INTO images (
+			filename,
+			file_size,
+			mime_type,
+			width,
+			height,
+			uploaded_at,
+			updated_at,
+			file_path,
+			thumbnail_path,
+			image_format,
+			tags
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, metadata.GetFilename(), metadata)
 	if err != nil {
-		return fmt.Errorf("failed to check if database exists: %w", err)
+		return -1, fmt.Errorf("%s: %w", op, err)
 	}
 
-	if exists {
-		return nil
-	}
-
-	_, err = db.Exec(fmt.Sprintf(`CREATE DATABASE %s`, dbName))
+	image_id, err := result.LastInsertId()
 	if err != nil {
-		return fmt.Errorf("failed to create the database: %w", err)
+		return -1, fmt.Errorf("%s: %w", op, err)
 	}
+	return image_id, nil
+}
 
-	return nil
+func (r *Repository) GetAllImages(ctx context.Context) ([]*imagev1.ImageMetadata, error) {
+	return nil, nil
+}
+
+func (r *Repository) GetImageById(ctx context.Context, image_id int64) (*imagev1.ImageMetadata, error) {
+	return nil, nil
+}
+
+func (r *Repository) DeleteImageById(ctx context.Context, image_id int64) (bool, error) {
+	return false, nil
 }

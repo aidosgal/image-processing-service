@@ -13,6 +13,10 @@ type ImageService struct {
 }
 
 type Repository interface {
+	StoreImage(ctx context.Context, metadata *imagev1.ImageMetadata) (int64, error)
+	GetAllImages(ctx context.Context) ([]*imagev1.ImageMetadata, error)
+	GetImageById(ctx context.Context, image_id int64) (*imagev1.ImageMetadata, error)
+	DeleteImageById(ctx context.Context, image_id int64) (bool, error)
 }
 
 func NewImageService(log *slog.Logger, repository Repository) *ImageService {
