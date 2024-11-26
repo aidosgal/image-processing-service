@@ -1,14 +1,17 @@
 package main
 
 import (
+	"database/sql"
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 
 	"github.com/aidosgal/image-processing-service/internal/config"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -19,7 +22,12 @@ func main() {
 	flag.Parse()
 
 	if migrationPath == "" {
-		panic("migration path no defined")
+		panic("migration path not defined")
+	}
+
+	err := ensureDatabaseExists(cfg)
+	if err != nil {
+		log.Fatalf("failed to ensure database exists: %v", err)
 	}
 
 	postgresURL := fmt.Sprintf(
@@ -45,5 +53,41 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("migration apllied successfully")
+	fmt.Println("migration applied successfully")
+}
+
+func ensureDatabaseExists(cfg *config.Config) error {
+	adminPostgresURL := fmt.Sprintf(
+		"postgres://%s:%s@%s:%d/postgres?sslmode=%s",
+		cfg.Database.User,
+		cfg.Database.Password,
+		cfg.Database.Host,
+		cfg.Database.Port,
+		cfg.Database.SSLMode,
+	)
+
+	db, err := sql.Open("postgres", adminPostgresURL)
+	if err != nil {
+		return fmt.Errorf("failed to connect to PostgreSQL server: %w", err)
+	}
+	defer db.Close()
+
+	var exists bool
+	query := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = '%s')", cfg.Database.Name)
+	err = db.QueryRow(query).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("failed to check if database exists: %w", err)
+	}
+
+	if !exists {
+		_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", cfg.Database.Name))
+		if err != nil {
+			return fmt.Errorf("failed to create database: %w", err)
+		}
+		fmt.Printf("database %s created successfully\n", cfg.Database.Name)
+	} else {
+		fmt.Printf("database %s already exists\n", cfg.Database.Name)
+	}
+
+	return nil
 }

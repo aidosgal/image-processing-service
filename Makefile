@@ -3,10 +3,10 @@ migrate:
 
 build:
 	@mkdir -p ./bin
-	@go build -o ./bin/image_service ./cmd/image_service/main.go --config=./config/local.yaml
+	@go build -o ./bin/image_service ./cmd/image_service/main.go
 
 run: build
-	@./bin/image_service
+	@./bin/image_service --config=./config/local.yaml
 
 test:
 	@go test -v ./...

@@ -1,11 +1,11 @@
 env: "local"
 grpc:
-  port: 8080
+  port: 50051
   timeout: 10h
 database:
-  user: "postgres"
+  user: "user"
   password: "password"
-  host: "localhost"
+  host: "postgres"
   port: 5432
   sslmode: "disable"
   name: "image_service"

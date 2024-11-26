@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:14.15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: image_service
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d image_service"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    build:
+      context: .
+    container_name: migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command:
+      [
+        "/app/bin/migrate",
+        "--config=/app/config/local.yaml",
+        "--migrations-path=/app/migrations",
+      ]
+    environment:
+      DATABASE_URL: postgres://user:password@postgres:5432/image_service?sslmode=disable
+
+  image_service:
+    build:
+      context: .
+    container_name: image_service
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    command: ["/app/bin/image_service", "--config=/app/config/local.yaml"]
+    ports:
+      - "50051:50051"
+    environment:
+      DATABASE_URL: postgres://user:password@postgres:5432/image_service?sslmode=disable
+
+volumes:
+  postgres_data:
