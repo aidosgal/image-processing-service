@@ -62,7 +62,7 @@ func (s *serverAPI) GetImage(ctx context.Context, req *imagev1.GetImageRequest) 
 
 	image, metadata, err := s.service.GetImage(ctx, req.GetImageId())
 	if err != nil {
-		return nil, status.Error(codes.Internal, "internal error")
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	return &imagev1.GetImageResponse{
